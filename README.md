@@ -17,3 +17,7 @@ Now you can just use the command `raspar`
 To view all available commands and their syntax use:  
 
 `node raspar-cli.js --help`  
+
+To view help for a single command, use:  
+
+`node raspar-cli.js noaa-buoy --help` 

@@ -4,10 +4,10 @@ const axios = require('axios').default;
  * main entry point
  * @returns {Promise<* | void>}
  */
-function scrapeBuoyData(stationId){
+function scrapeBuoyData(stationId, dateFilters){
 
     //TODO: Give user a way to specify years
-    let years = ['realtime'];
+    dateFilters = getDateFilterArrayFromString(dateFilters);
 
     let stationIds = stationId.split(',');
 
@@ -22,15 +22,17 @@ function scrapeBuoyData(stationId){
     for(let i=0;i<stationIds.length;i++){
 
         //TODO: Add fetches for each historic year in the set
-        for(let j=0;j<years.length;j++){
-            if(years[j] === 'realtime'){
+        for(let j=0;j<dateFilters.length;j++){
+            if(dateFilters[j] === 'realtime'){
                 //real time data
                 //request the data to be fetched and push the return promise onto the list of all requests
                 allPendingRequests.push( fetchData(buoyBaseUrl + stationIds[i] + '.txt', stationIds[i]) );
             } else {
+                //TODO: For this statement, test if the dateFilter is a year
+
                 // historic year data
                 //request the data to be fetched and push the return promise onto the list of all requests
-                allPendingRequests.push( fetchData(buoyHistoricUrl + stationIds[i].toLowerCase() + 'h' + years[j] +
+                allPendingRequests.push( fetchData(buoyHistoricUrl + stationIds[i].toLowerCase() + 'h' + dateFilters[j] +
                     '.txt.gz&dir=data/historical/stdmet/', stationIds[i])
                 );
             }
@@ -98,6 +100,36 @@ function convertDataToCsv(data, stationId){
         .replace(/(.+\n)/g, stationId + ',$1')
 
     ;
+}
+
+function getDateFilterArrayFromString(dateFilterString){
+    let dateFilterParts = dateFilterString ? dateFilterString.split('-') : ['realtime'];
+    let dateFilterArray = [];
+    if(dateFilterParts.length > 1){
+        let filterA = dateFilterParts[0] !== 'realtime' ? parseInt(dateFilterParts[0]) : dateFilterParts[0];
+        let filterB = dateFilterParts[1] !== 'realtime' ? parseInt(dateFilterParts[1]) : dateFilterParts[1];
+
+        if(typeof filterA === 'number' && typeof filterB === 'number'){
+            let firstFilter, lastFilter = null;
+            if(filterA>filterB){
+                firstFilter = filterA;
+                lastFilter = filterB;
+            } else {
+                firstFilter = filterB;
+                lastFilter = filterA;
+            }
+            dateFilterArray.push(firstFilter.toString());
+
+            for(let i=1;i<(firstFilter-lastFilter);i++){
+                dateFilterArray.push((lastFilter + i).toString());
+            }
+            dateFilterArray.push(lastFilter.toString());
+        }
+    } else {
+        dateFilterArray = dateFilterParts;
+    }
+
+    return dateFilterArray;
 }
 
 
