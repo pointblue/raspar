@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-let raspar = require('./index');
+let raspar = require('.');
 let fs = require('fs');
 
 //configure the command line

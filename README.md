@@ -14,6 +14,9 @@ Be sure you have `pkg` installed globally: `sudo npm install -g pkg`.
 
 Run the package script in the current path: `yarn run pkg`  
 
+Note: I was only able to get a functional windows binary by building it on a windows machine in the nodejs
+command line environment.  `pkg . --out-path=dist --targets=node10-win-x64`
+
 Copy the generated binary to you local bin path:  
 
 `sudo cp dist/raspar-linux /usr/local/bin/raspar && sudo chmod a+rx /usr/local/bin/raspar`  
