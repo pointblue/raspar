@@ -1,3 +1,7 @@
 .idea
 node_modules
 stations.txt
+/raspar-linux
+/raspar-macos
+/raspar-win.exe
+*.csv

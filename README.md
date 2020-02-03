@@ -4,11 +4,19 @@ data scraping tasks.
 
 ## Install  
 
-`yarn install`
+`yarn install`  
 
-Install to the local bin path so you can use it by alias
+The script can now be run as `node raspar-cli.js <cmd> [options]`.  
 
-`sudo ln -sf /path/to/raspar-cli.js /usr/local/bin/raspar`  
+## Generating stand-alone binaries  
+
+Be sure you have `pkg` installed globally: `sudo npm install -g pkg`.  
+
+Run the package command in the current path: `pkg .`  
+
+Copy the generated binary to you local bin path:  
+
+`sudo cp raspar-linux /usr/local/bin/raspar && sudo chmod a+rx /usr/local/bin/raspar`  
 
 Now you can just use the command `raspar`  
 
@@ -16,10 +24,10 @@ Now you can just use the command `raspar`
 
 To view all available commands and their syntax use:  
 
-`node raspar-cli.js --help`  
+`raspar --help`  
 
 To view help for a single command, use:  
 
-`node raspar-cli.js noaa-buoy --help` 
+`raspar noaa-buoy --help` 
 
 where `noaa-buoy` is the name of the command you want help for.  
