@@ -21,3 +21,5 @@ To view all available commands and their syntax use:
 To view help for a single command, use:  
 
 `node raspar-cli.js noaa-buoy --help` 
+
+where `noaa-buoy` is the name of the command you want help for.  

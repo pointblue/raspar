@@ -15,12 +15,16 @@ let _argv = require('yargs').scriptName("raspar")
             .demandOption('station_id')
             .option('date-filter', {
                 requiresArg: true,
-                describe: 'a year',
+                describe: 'a year, range of years, or \'realtime\'',
                 type: 'string'
             })
             .example('$0 noaa-buoy PORO3', 'get data from station id PORO3')
             .example('$0 noaa-buoy PORO3,UNLA2', 'get data from station id\'s PORO3 and UNLA2')
-            .example('$0 noaa-buoy stations.txt', 'get data from station id\'s listed in stations.txt file')
+            .example('$0 noaa-buoy stations.txt', 'get data from station id\'s listed in stations.txt file (one id per line)')
+            .example('$0 noaa-buoy PORO3 --date-filter=realtime', 'limit to latest realtime data (default)')
+            .example('$0 noaa-buoy PORO3 --date-filter=2015', 'limit to data from 2015')
+            .example('$0 noaa-buoy PORO3 --date-filter=2018-2015', 'limit to data from 2018-2015')
+            .example('$0 noaa-buoy PORO3 --date-filter=2015-realtime', 'limit to data from 2015-realtime')
     }, commandNoaaBuoy)
     .example('$0 noaa-buoy --help', 'show examples of the using the noaa-buoy command')
     .help()
