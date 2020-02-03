@@ -18,9 +18,15 @@ let _argv = require('yargs').scriptName("raspar")
                 describe: 'a year, range of years, or \'realtime\'',
                 type: 'string'
             })
+            .option('output-file', {
+                requiresArg: true,
+                describe: 'a file to save output to. will be created if it does not exist.',
+                type: 'string'
+            })
             .example('$0 noaa-buoy PORO3', 'get data from station id PORO3')
             .example('$0 noaa-buoy PORO3,UNLA2', 'get data from station id\'s PORO3 and UNLA2')
             .example('$0 noaa-buoy stations.txt', 'get data from station id\'s listed in stations.txt file (one id per line)')
+            .example('$0 noaa-buoy stations.txt --output-file=my_output.csv', 'send data output to file my_output.csv (works for all options)')
             .example('$0 noaa-buoy PORO3 --date-filter=realtime', 'limit to latest realtime data (default)')
             .example('$0 noaa-buoy PORO3 --date-filter=2015', 'limit to data from 2015')
             .example('$0 noaa-buoy PORO3 --date-filter=2018-2015', 'limit to data from 2018-2015')
@@ -36,6 +42,9 @@ function commandNoaaBuoy(argv) {
     let stations = argv['station_id'];
 
     let dateFilters = argv['date-filter'] ? argv['date-filter'] : null;
+
+    let outputFile = argv['output-file'] ? argv['output-file'] : null;
+
     //test if the station_id passed is actually a file
     if( fs.existsSync(stations) ){
         //if so, get the stations as a csv from the file
@@ -43,7 +52,12 @@ function commandNoaaBuoy(argv) {
     }
 
     raspar.scrapeBuoyData(stations ,dateFilters).then(function(buoyDataCsv){
-        console.log(buoyDataCsv);
+        if(outputFile){
+            fs.writeFileSync(outputFile, buoyDataCsv);
+        } else {
+            console.log(buoyDataCsv);
+        }
+
     });
 
 }
