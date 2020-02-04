@@ -1,0 +1,33 @@
+﻿raspar
+data scraping tool
+
+This tool can be run on the windows command prompt. 
+Open the prompt and navigate to the folder where this file is located. 
+You can then try some of the commands below.
+# show data for station PORO3
+# by default this will show real time data
+> raspar.exe noaa-buoy PORO3
+
+# save data output to csv file
+> raspar.exe noaa-buoy PORO3 --output-file=poro3_realtime.csv
+
+
+# show data for a single year, for several stations
+> raspar.exe noaa-buoy PORO3,42085,JTAW1 --date-filter=2019
+
+# show data for a range of years
+> raspar.exe noaa-buoy PORO3 --date-filter=2015-2017
+
+# show for all stations listed in a test file
+> raspar.exe noaa-buoy stations.txt
+
+References
+National Data Buoy Center
+All the data is from this website:
+https://www.ndbc.noaa.gov/
+Understanding the data
+See the Measurement Descriptions and Units document on the NOAA website - https://www.ndbc.noaa.gov/measdes.shtml
+Station List
+You can find station id’s for use with the tool here:
+https://www.ndbc.noaa.gov/to_station.shtml
+
