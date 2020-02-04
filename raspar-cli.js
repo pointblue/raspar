@@ -68,7 +68,13 @@ function commandNoaaBuoy(argv) {
         stations = getStationsFromFile(stations);
     }
 
-    raspar.scrapeBuoyData(stations , dateFilters, verbose, addHeaders).then(function(buoyDataCsv){
+    let options = {
+        dateFilters:dateFilters,
+        verbose:verbose,
+        addHeaders:addHeaders
+    };
+
+    raspar.scrapeBuoyData(stations, options).then(function(buoyDataCsv){
         fs.writeFileSync(outputFile, buoyDataCsv);
         console.log('raspar success!');
         console.log('Output file created at: ' + outputFile);
