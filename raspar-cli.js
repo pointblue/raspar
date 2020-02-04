@@ -2,6 +2,7 @@
 
 let raspar = require('.');
 let fs = require('fs');
+let moment = require('moment');
 
 //configure the command line
 let _argv = require('yargs').scriptName("raspar")
@@ -13,19 +14,21 @@ let _argv = require('yargs').scriptName("raspar")
                 'file name containing a station id per line.'
         })
             .demandOption('station_id')
-            .option('date-filter', {
+            .option('d', {
+                alias: 'date-filter',
                 requiresArg: true,
                 describe: 'a year, range of years, or \'realtime\'',
                 type: 'string'
             })
-            .option('output-file', {
+            .option('o', {
+                alias:'output-file',
                 requiresArg: true,
                 describe: 'a file to save output to. will be created if it does not exist.',
                 type: 'string'
             })
             .option('without-headers', {
                 "boolean": true,
-                describe: 'output data without column headers'
+                describe: 'save data without column headers'
             })
             .example('$0 noaa-buoy PORO3', 'get data from station id PORO3')
             .example('$0 noaa-buoy PORO3,UNLA2', 'get data from station id\'s PORO3 and UNLA2')
@@ -46,7 +49,8 @@ function commandNoaaBuoy(argv) {
 
     let dateFilters = argv['date-filter'] ? argv['date-filter'] : null;
 
-    let outputFile = argv['output-file'] ? argv['output-file'] : null;
+    let defaultOutputFile = createNoaaBuoyOutputName(stations, dateFilters);
+    let outputFile = argv['output-file'] ? argv['output-file'] : defaultOutputFile;
 
     //if the without-headers flag is set (true), then the `addHeaders` variable is false
     let addHeaders = ! argv['without-headers'];
@@ -58,12 +62,9 @@ function commandNoaaBuoy(argv) {
     }
 
     raspar.scrapeBuoyData(stations , dateFilters, addHeaders).then(function(buoyDataCsv){
-        if(outputFile){
-            fs.writeFileSync(outputFile, buoyDataCsv);
-        } else {
-            console.log(buoyDataCsv);
-        }
-
+        fs.writeFileSync(outputFile, buoyDataCsv);
+        console.log('raspar success!');
+        console.log('Output file created at: ' + outputFile);
     });
 
 }
@@ -71,4 +72,10 @@ function commandNoaaBuoy(argv) {
 function getStationsFromFile(fileName){
     let stationsFileData = fs.readFileSync(fileName, 'utf8');
     return stationsFileData.replace(/\n/g, ',');
+}
+
+function createNoaaBuoyOutputName(stations, dateFilters){
+    let stationsPart = stations.replace(',', '-');
+    let dateFiltersPart = dateFilters ? dateFilters : 'realtime';
+    return 'noaa-buoy_' + stationsPart + '_' + dateFiltersPart + '_' + moment().format('YYYYMMDDHHmmssZZ') + '.csv';
 }
