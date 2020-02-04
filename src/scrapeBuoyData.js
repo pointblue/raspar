@@ -3,11 +3,15 @@ const axios = require('axios').default;
 const HEADER_ROW_1 = "SID,YY,MM,DD,hh,mm,WDIR,WSPD,GST,WVHT,DPD,APD,MWD,PRES,ATMP,WTMP,DEWP,VIS,PTDY,TIDE\n";
 const HEADER_ROW_2 = "sid,yr,mo,dy,hr,mn,degT,m/s,m/s,m,sec,sec,degT,hPa,degC,degC,degC,nmi,hPa,f\n";
 
+let IS_VERBOSE = false;
+
 /**
  * main entry point
  * @returns {Promise<* | void>}
  */
-function scrapeBuoyData(stationId, dateFilters, addHeaders){
+function scrapeBuoyData(stationId, dateFilters, verbose, addHeaders){
+
+    IS_VERBOSE = verbose;
 
     //if the addHeaders argument was not given, set it to true by default
     addHeaders = typeof addHeaders === 'undefined' ? true : addHeaders;
@@ -105,14 +109,15 @@ function fetchData (url, stationId){
     return axios.get(url)
         .then(parseResponseData)
         .then(function(data){
-            //TODO: Verify this can be converted to CSV and it's not like a page telling you the resource doesn't exist
+            if(IS_VERBOSE){
+                console.log('[success loading] ' + url);
+            }
             return convertDataToCsv(data, stationId);
         })
         .catch(function (error) {
-            // handle error
-            // all errors should be skipped. it might just be data that's not available
-            // log errors in an actual log
-            //TODO: Log the url you could not fetch
+            if(IS_VERBOSE){
+                console.log('[failed loading] ' + url);
+            }
         });
 }
 

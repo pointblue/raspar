@@ -26,6 +26,11 @@ let _argv = require('yargs').scriptName("raspar")
                 describe: 'a file to save output to. will be created if it does not exist.',
                 type: 'string'
             })
+            .option('v',{
+                alias:'verbose',
+                "boolean":true,
+                describe: 'print out status messages'
+            })
             .option('without-headers', {
                 "boolean": true,
                 describe: 'save data without column headers'
@@ -33,10 +38,10 @@ let _argv = require('yargs').scriptName("raspar")
             .example('$0 noaa-buoy PORO3', 'get data from station id PORO3')
             .example('$0 noaa-buoy PORO3,UNLA2', 'get data from station id\'s PORO3 and UNLA2')
             .example('$0 noaa-buoy stations.txt', 'get data from station id\'s listed in stations.txt file (one id per line)')
-            .example('$0 noaa-buoy stations.txt --output-file=my_output.csv', 'send data output to file my_output.csv')
-            .example('$0 noaa-buoy PORO3 --date-filter=2015', 'limit to data from 2015')
-            .example('$0 noaa-buoy PORO3 --date-filter=2018-2015', 'limit to data from 2018-2015')
-            .example('$0 noaa-buoy PORO3 --date-filter=2015-realtime', 'limit to data from 2015-realtime')
+            .example('$0 noaa-buoy stations.txt -o=my_output.csv', 'send data output to file my_output.csv')
+            .example('$0 noaa-buoy PORO3 -d=2015', 'limit to data from 2015')
+            .example('$0 noaa-buoy PORO3 -d=2018-2015', 'limit to data from 2018-2015')
+            .example('$0 noaa-buoy PORO3 -d=2015-realtime', 'limit to data from 2015-realtime')
     }, commandNoaaBuoy)
     .example('$0 noaa-buoy --help', 'buoy data - help using the `noaa-buoy` command')
     .help()
@@ -52,6 +57,8 @@ function commandNoaaBuoy(argv) {
     let defaultOutputFile = createNoaaBuoyOutputName(stations, dateFilters);
     let outputFile = argv['output-file'] ? argv['output-file'] : defaultOutputFile;
 
+    let verbose = argv['verbose'];
+
     //if the without-headers flag is set (true), then the `addHeaders` variable is false
     let addHeaders = ! argv['without-headers'];
 
@@ -61,7 +68,7 @@ function commandNoaaBuoy(argv) {
         stations = getStationsFromFile(stations);
     }
 
-    raspar.scrapeBuoyData(stations , dateFilters, addHeaders).then(function(buoyDataCsv){
+    raspar.scrapeBuoyData(stations , dateFilters, verbose, addHeaders).then(function(buoyDataCsv){
         fs.writeFileSync(outputFile, buoyDataCsv);
         console.log('raspar success!');
         console.log('Output file created at: ' + outputFile);
