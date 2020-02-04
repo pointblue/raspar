@@ -1,20 +1,23 @@
 const axios = require('axios').default;
 
+const HEADER_ROW_1 = "SID,YY,MM,DD,hh,mm,WDIR,WSPD,GST,WVHT,DPD,APD,MWD,PRES,ATMP,WTMP,DEWP,VIS,PTDY,TIDE\n";
+const HEADER_ROW_2 = "sid,yr,mo,dy,hr,mn,degT,m/s,m/s,m,sec,sec,degT,hPa,degC,degC,degC,nmi,hPa,f\n";
+
 /**
  * main entry point
  * @returns {Promise<* | void>}
  */
-function scrapeBuoyData(stationId, dateFilters){
+function scrapeBuoyData(stationId, dateFilters, addHeaders){
 
-    //TODO: Give user a way to specify years
+    //if the addHeaders argument was not given, set it to true by default
+    addHeaders = typeof addHeaders === 'undefined' ? true : addHeaders;
+
+    //take a string like 2010-2015 and get and array when each item is a year or year/month that can be fetched
     dateFilters = getDateFilterArrayFromString(dateFilters);
 
     let stationIds = stationId.split(',');
 
-    //TODO: Allow users to enter a file name that will provide a list of station id's
-    // each id will be pulled and concat'd into a single file. each record with have
-    // the station id prepended to it so that it can be reference in the final output
-
+    //TODO: Turn these strings into {{mustache}} style templates and move them to a separate config file
     let buoyBaseUrl = 'https://www.ndbc.noaa.gov/data/realtime2/';
     let buoyHistoricUrl = 'https://www.ndbc.noaa.gov/view_text_file.php?filename=';
     let buoyMonthUrl = 'https://www.ndbc.noaa.gov/view_text_file.php?filename=';
@@ -36,6 +39,8 @@ function scrapeBuoyData(stationId, dateFilters){
                 );
             } else if(dateFilters[j].match(/^\d\d\d\d\/\d\d?$/)){
 
+                //TODO: Clean this up or put it in another function. i don't want to see a switch statement on the third
+                // ordinal else if statement, yikes
                 let monthName = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
                 let parts = dateFilters[j].split('/');
                 let year = parseInt(parts[0]);
@@ -82,7 +87,15 @@ function scrapeBuoyData(stationId, dateFilters){
             data += arguments[i] ;
         }
 
-        return data;
+
+        //the default behavior is to add headers
+        if( addHeaders ){
+            return HEADER_ROW_1 + HEADER_ROW_2 + data;
+        } else {
+            return data;
+        }
+
+
     }));
 
 }
@@ -90,14 +103,16 @@ function scrapeBuoyData(stationId, dateFilters){
 
 function fetchData (url, stationId){
     return axios.get(url)
-        .then(parseData)
+        .then(parseResponseData)
         .then(function(data){
+            //TODO: Verify this can be converted to CSV and it's not like a page telling you the resource doesn't exist
             return convertDataToCsv(data, stationId);
         })
         .catch(function (error) {
             // handle error
             // all errors should be skipped. it might just be data that's not available
             // log errors in an actual log
+            //TODO: Log the url you could not fetch
         });
 }
 
@@ -106,7 +121,7 @@ function fetchData (url, stationId){
  * @param response
  * @returns {*}
  */
-function parseData(response){
+function parseResponseData(response){
     return response.data;
 }
 
@@ -138,7 +153,6 @@ function getDateFilterArrayFromString(dateFilterString){
     //make sure you can't do weird stuff like 2009-2009
     dateFilterParts = removeDuplicates(dateFilterParts);
 
-    //TODO: Remove any duplicate from the dateFilterParts
     let dateFilterArray = [];
     if(dateFilterParts.length > 1){
         //only use the first two parts, avoiding weird stuff like 2009-2013-2016
@@ -168,8 +182,6 @@ function getDateFilterArrayFromString(dateFilterString){
 
 
     if(dateFilterArray[0] === currentYear.toString()){
-        let countYear = currentYear-1;
-        let countMonth = currentMonth;
 
         //we'll need to fetch the realtime day, plus the last 10 months
         //remove the year
@@ -182,22 +194,6 @@ function getDateFilterArrayFromString(dateFilterString){
         for(let i=1;i<=currentMonth;i++){
             dateFilterArray.splice(0,0,currentYear + '/' + i);
         }
-        //get 10 months of data starting 12 months ago
-        // for(let i=0;i<=10;i++){
-        //     countMonth = currentMonth+i;
-        //
-        //     //TODO: Should this really be splitting between years? I don't even know how they release data between years
-        //     //if this is the first time we went over 12
-        //     if(countMonth === 13){
-        //         //increment the year
-        //         countYear++;
-        //     }
-        //     //if we're over 12 months, subtract twelve
-        //     if(countMonth > 12){
-        //         countMonth = countMonth - 12
-        //     }
-        //     dateFilterArray.splice(0,0,countYear + '/' + countMonth);
-        // }
 
         //request the latest data
         dateFilterArray.splice(0,0,'realtime');
@@ -223,9 +219,8 @@ function getDateFilterArrayFromString(dateFilterString){
         }
     }
 
-
-
     return dateFilterArray;
+
 }
 
 function removeDuplicates(array) {

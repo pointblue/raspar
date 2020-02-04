@@ -23,16 +23,19 @@ let _argv = require('yargs').scriptName("raspar")
                 describe: 'a file to save output to. will be created if it does not exist.',
                 type: 'string'
             })
+            .option('without-headers', {
+                "boolean": true,
+                describe: 'output data without column headers'
+            })
             .example('$0 noaa-buoy PORO3', 'get data from station id PORO3')
             .example('$0 noaa-buoy PORO3,UNLA2', 'get data from station id\'s PORO3 and UNLA2')
             .example('$0 noaa-buoy stations.txt', 'get data from station id\'s listed in stations.txt file (one id per line)')
-            .example('$0 noaa-buoy stations.txt --output-file=my_output.csv', 'send data output to file my_output.csv (works for all options)')
-            .example('$0 noaa-buoy PORO3 --date-filter=realtime', 'limit to latest realtime data (default)')
+            .example('$0 noaa-buoy stations.txt --output-file=my_output.csv', 'send data output to file my_output.csv')
             .example('$0 noaa-buoy PORO3 --date-filter=2015', 'limit to data from 2015')
             .example('$0 noaa-buoy PORO3 --date-filter=2018-2015', 'limit to data from 2018-2015')
             .example('$0 noaa-buoy PORO3 --date-filter=2015-realtime', 'limit to data from 2015-realtime')
     }, commandNoaaBuoy)
-    .example('$0 noaa-buoy --help', 'show examples of the using the noaa-buoy command')
+    .example('$0 noaa-buoy --help', 'buoy data - help using the `noaa-buoy` command')
     .help()
     .argv
 ;
@@ -45,13 +48,16 @@ function commandNoaaBuoy(argv) {
 
     let outputFile = argv['output-file'] ? argv['output-file'] : null;
 
+    //if the without-headers flag is set (true), then the `addHeaders` variable is false
+    let addHeaders = ! argv['without-headers'];
+
     //test if the station_id passed is actually a file
     if( fs.existsSync(stations) ){
         //if so, get the stations as a csv from the file
         stations = getStationsFromFile(stations);
     }
 
-    raspar.scrapeBuoyData(stations ,dateFilters).then(function(buoyDataCsv){
+    raspar.scrapeBuoyData(stations , dateFilters, addHeaders).then(function(buoyDataCsv){
         if(outputFile){
             fs.writeFileSync(outputFile, buoyDataCsv);
         } else {
