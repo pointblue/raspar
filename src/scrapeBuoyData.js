@@ -1,5 +1,5 @@
 const axios = require('axios').default;
-
+const mustache = require('mustache');
 
 
 function NoaaBuoyScraper(stationId, options){
@@ -7,8 +7,14 @@ function NoaaBuoyScraper(stationId, options){
     const HEADER_ROW_1 = "SID,YY,MM,DD,hh,mm,WDIR,WSPD,GST,WVHT,DPD,APD,MWD,PRES,ATMP,WTMP,DEWP,VIS,PTDY,TIDE\n";
     const HEADER_ROW_2 = "sid,yr,mo,dy,hr,mn,degT,m/s,m/s,m,sec,sec,degT,hPa,degC,degC,degC,nmi,hPa,f\n";
 
-    let IS_VERBOSE = options.hasOwnProperty('verbose') ? options['verbose'] : false;
-    let ADD_HEADERS = options.hasOwnProperty('addHeaders') ? options['addHeaders'] : true;
+    const REALTIME_TEMPLATE = 'https://www.ndbc.noaa.gov/data/realtime2/{{stationIdUpperCase}}.txt';
+    const HISTORIC_TEMPLATE = 'https://www.ndbc.noaa.gov/view_text_file.php?filename={{stationIdLowerCase}}h{{year}}.txt.gz&dir=data/historical/stdmet/';
+    const MONTH_TEMPLATE = 'https://www.ndbc.noaa.gov/view_text_file.php?filename={{stationIdLowerCase}}{{monthCode}}{{year}}.txt.gz&dir=data/stdmet/{{monthShortName}}/';
+
+    const MONTH_SHORT_NAME = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    let isVerbose = options.hasOwnProperty('verbose') ? options['verbose'] : false;
+    let addHeaders = options.hasOwnProperty('addHeaders') ? options['addHeaders'] : true;
     let dateFilters = options.hasOwnProperty('dateFilters') ? options['dateFilters'] : 'realtime';
 
     this.scrape = scrape;
@@ -16,58 +22,49 @@ function NoaaBuoyScraper(stationId, options){
     function scrape(){
 
         //take a string like 2010-2015 and get and array when each item is a year or year/month that can be fetched
-        let allDateFilters = getDateFilterArrayFromString(dateFilters);
+        let allDateFilters = getDatesFromRange(dateFilters);
 
         let stationIds = stationId.split(',');
 
-        //TODO: Turn these strings into {{mustache}} style templates and move them to a separate config file
-        let buoyBaseUrl = 'https://www.ndbc.noaa.gov/data/realtime2/';
-        let buoyHistoricUrl = 'https://www.ndbc.noaa.gov/view_text_file.php?filename=';
-        let buoyMonthUrl = 'https://www.ndbc.noaa.gov/view_text_file.php?filename=';
         let allPendingRequests = [];
+        let templateOptions = {};
 
         for(let i=0;i<stationIds.length;i++){
 
-            //TODO: Add fetches for each historic year in the set
+            //Add fetches for each historic year in the set
             for(let j=0;j<allDateFilters.length;j++){
+
                 if(allDateFilters[j] === 'realtime'){
                     //real time data
-                    //request the data to be fetched and push the return promise onto the list of all requests
-                    allPendingRequests.push( fetchData(buoyBaseUrl + stationIds[i] + '.txt', stationIds[i]) );
+                    templateOptions['stationIdUpperCase'] = stationIds[i].toUpperCase();
+                    // noinspection JSUnresolvedFunction
+                    let url = mustache.render(REALTIME_TEMPLATE, templateOptions);
+                    allPendingRequests.push( fetchData( url, stationIds[i]) );
                 } else if(allDateFilters[j].match(/^\d\d\d\d$/)){
                     // historic year data
-                    //request the data to be fetched and push the return promise onto the list of all requests
-                    allPendingRequests.push( fetchData(buoyHistoricUrl + stationIds[i].toLowerCase() + 'h' + allDateFilters[j] +
-                        '.txt.gz&dir=data/historical/stdmet/', stationIds[i])
-                    );
+                    templateOptions = {
+                        stationIdLowerCase: stationIds[i].toLowerCase(),
+                        year: allDateFilters[j]
+                    };
+                    // noinspection JSUnresolvedFunction
+                    let url = mustache.render(HISTORIC_TEMPLATE, templateOptions);
+                    allPendingRequests.push( fetchData( url, stationIds[i]) );
                 } else if(allDateFilters[j].match(/^\d\d\d\d\/\d\d?$/)){
-
-                    //TODO: Clean this up or put it in another function. i don't want to see a switch statement on the third
-                    // ordinal else if statement, yikes
-                    let monthName = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                    // monthly data
                     let parts = allDateFilters[j].split('/');
                     let year = parseInt(parts[0]);
                     let month = parseInt(parts[1]);
-                    let monthCode = '';
-                    switch (month) {
-                        case 10:
-                            monthCode = 'a';
-                            break;
-                        case 11:
-                            monthCode = 'b';
-                            break;
-                        case 12:
-                            monthCode = 'v';
-                            break;
-                        default:
-                            monthCode = month.toString();
-                            break;
-                    }
-                    //https://www.ndbc.noaa.gov/view_text_file.php?filename={{station_id}}{{month_integer}}2019.txt.gz&dir=data/stdmet/{{month_3_letter_code}}/
-                    let url = buoyMonthUrl + stationIds[i].toLowerCase() + monthCode + year + '.txt.gz&dir=data/stdmet/' + monthName[month-1] + '/';
+                    let monthCode = getMonthCode(month);
+                    templateOptions = {
+                        stationIdLowerCase: stationIds[i].toLowerCase(),
+                        monthCode: monthCode,
+                        year: year,
+                        monthShortName: MONTH_SHORT_NAME[month-1]
+                    };
 
-                    allPendingRequests.push( fetchData(url, stationIds[i]) );
-
+                    // noinspection JSUnresolvedFunction
+                    let url = mustache.render(MONTH_TEMPLATE, templateOptions);
+                    allPendingRequests.push( fetchData( url, stationIds[i]) );
                 } else {
                     throw Error( "Date filter did not match a know pattern: " + allDateFilters[j]);
                 }
@@ -79,20 +76,19 @@ function NoaaBuoyScraper(stationId, options){
         }
 
 
-
-
-
+        // after all requests are finished
         return axios.all(allPendingRequests).then(axios.spread(function(){
+            // send the data for each to our spread function
 
-            //concat the results and return
+            //concat the value of each function argument to data
             let data = '';
             for(let i=0;i<allPendingRequests.length;i++){
                 data += arguments[i] ;
             }
 
 
-            //the default behavior is to add headers
-            if( ADD_HEADERS ){
+            //add headers unless the user explicitly excluded them
+            if( addHeaders ){
                 return HEADER_ROW_1 + HEADER_ROW_2 + data;
             } else {
                 return data;
@@ -107,13 +103,13 @@ function NoaaBuoyScraper(stationId, options){
         return axios.get(url)
             .then(parseResponseData)
             .then(function(data){
-                if(IS_VERBOSE){
+                if(isVerbose){
                     console.log('[success loading] ' + url);
                 }
                 return convertDataToCsv(data, stationId);
             })
             .catch(function (error) {
-                if(IS_VERBOSE){
+                if(isVerbose){
                     console.log('[failed loading] ' + url);
                 }
             });
@@ -149,7 +145,13 @@ function NoaaBuoyScraper(stationId, options){
             ;
     }
 
-    function getDateFilterArrayFromString(dateFilterString){
+    /**
+     * Create an array of date strings as YYYY, YYYY/MM, or realtime
+     * @param dateFilterString
+     * @returns {[]}
+     */
+    function getDatesFromRange(dateFilterString){
+
         let currentYear = (new Date()).getFullYear();
         let currentMonth = (new Date()).getMonth() + 1;
         let dateFilterParts = dateFilterString ? dateFilterString.split('-') : ['realtime'];
@@ -184,46 +186,56 @@ function NoaaBuoyScraper(stationId, options){
         }
 
 
-        if(dateFilterArray[0] === currentYear.toString()){
+        if(dateFilterArray[0] === currentYear.toString() || dateFilterArray[0] === (currentYear - 1).toString()){
 
-            //we'll need to fetch the realtime day, plus the last 10 months
             //remove the year
             dateFilterArray.splice(0,1);
             //request everything last year by month
-            for(let i=1;i<=12;i++){
-                dateFilterArray.splice(0,0,currentYear-1 + '/' + i);
-            }
-            //request everything this year by month, up to this month
-            for(let i=1;i<=currentMonth;i++){
-                dateFilterArray.splice(0,0,currentYear + '/' + i);
-            }
+            addMonthFilters(currentYear-1, dateFilterArray);
 
-            //request the latest data
-            dateFilterArray.splice(0,0,'realtime');
+            if(dateFilterArray[0] === currentYear.toString()){
+                //request everything this year by month, up to this month
+                addMonthFilters(currentYear, dateFilterArray, currentMonth);
 
-            //add a reference to last year if it doesn't already exists. this ensure that it will be downloaded if it's archived
-            if(!dateFilterArray.indexOf((currentYear-1).toString())){
-                dateFilterArray.push((currentYear-1).toString());
-            }
-
-        } else if(dateFilterArray[0] === (currentYear - 1).toString()){
-            //last year's data might not be 'historic' yet, so we'll have to fetch that by month as well
-            //remove the year
-            dateFilterArray.splice(0,1);
-
-            for(let i=1;i<=12;i++){
-                //add the year/month combo to the front of the array
-                dateFilterArray.splice(0,0,(currentYear - 1).toString() + '/' + i);
+                //request the latest data
+                dateFilterArray.splice(0,0,'realtime');
             }
 
             //add a reference to last year if it doesn't already exists. this ensure that it will be downloaded if it's archived
             if(!dateFilterArray.indexOf((currentYear-1).toString())){
                 dateFilterArray.push((currentYear-1).toString());
             }
+
         }
 
         return dateFilterArray;
 
+    }
+
+    function addMonthFilters(year, dateFilterArray, stopMonth){
+        stopMonth = typeof stopMonth === 'undefined' ? 12 : stopMonth;
+        for(let i=1;i<=stopMonth;i++){
+            dateFilterArray.splice(0,0, year + '/' + i);
+        }
+    }
+
+    function getMonthCode(month){
+        let monthCode = '';
+        switch (month) {
+            case 10:
+                monthCode = 'a';
+                break;
+            case 11:
+                monthCode = 'b';
+                break;
+            case 12:
+                monthCode = 'v';
+                break;
+            default:
+                monthCode = month.toString();
+                break;
+        }
+        return monthCode;
     }
 
     function removeDuplicates(array) {
