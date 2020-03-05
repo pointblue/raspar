@@ -1,6 +1,6 @@
 {
   "name": "raspar",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "",
   "main": "index.js",
   "bin": "raspar-cli.js",
@@ -14,6 +14,8 @@
   "dependencies": {
     "axios": "^0.19.2",
     "fs": "^0.0.1-security",
+    "moment": "^2.24.0",
+    "mustache": "^4.0.0",
     "yargs": "^15.1.0"
   }
 }
